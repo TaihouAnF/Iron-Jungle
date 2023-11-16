@@ -4,15 +4,15 @@ using UnityEngine;
 public enum PlatformType
 {
     Normal,
-    Other,
+    Breakable,
+    Uneven,
+    Moving,
+    Rotating
 }
 
 public class PlatformsBehavior : MonoBehaviour
 {
     public PlatformType type;
-    public bool isBreakable;
-    public bool isMovable;
-    public bool isRotatable;
     [Tooltip("Indicate whether this platform should activate its own script at the start or after being latched")]
     public bool shouldActive;
     public bool isLatched;
@@ -29,24 +29,21 @@ public class PlatformsBehavior : MonoBehaviour
         isValid = valid;
     }
 
-    private void TypeHandler(bool start)
-    {
-        if (isValid)
+    private void TypeHandler(bool start) 
+    { 
+        switch(type)
         {
-            if (isBreakable)
-            {
+            case PlatformType.Breakable:
                 GetComponent<BreakingBehavior>().SetBreakingStart(start);
-            }
-
-            if (isMovable)
-            {
+                break;
+            case PlatformType.Moving:
                 GetComponent<MovingBehavior>().SetMovingStart(start);
-            }
-
-            if (isRotatable)
-            {
+                break;
+            case PlatformType.Rotating: 
                 GetComponent<RotatingBehavior>().SetRotatingStart(start);
-            }
+                break;
+            default:
+                break;
         }
     }
 }
