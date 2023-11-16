@@ -38,6 +38,7 @@ public class MovingBehavior : MonoBehaviour
     {
         if (shouldMove)
         {
+            // Wait on the destination
             if (timeDestCoolDown > 0)
             {
                 timeDestCoolDown -= Time.deltaTime;
@@ -50,7 +51,7 @@ public class MovingBehavior : MonoBehaviour
         }
         else if (!shouldMove && Vector3.Distance(movingObject.transform.position, startingLocation.position) > 0)
         {
-            // Cool down
+            // Cool down, when player detach the grapple, the platform needs to wait for a bit
             timeDestCoolDown = timeDestCoolDown != 0 ? 0 : timeDestCoolDown;
             if (timeWaitCoolDown > 0)
             {
@@ -70,6 +71,10 @@ public class MovingBehavior : MonoBehaviour
     }
 
     #region Moving Methods
+
+    /// <summary>
+    /// Move the platform object, once reach the destination, it will turn back.
+    /// </summary>
     private void Move()
     {
         if (timeWaitCoolDown != timeToWait) timeWaitCoolDown = timeToWait;
@@ -90,6 +95,9 @@ public class MovingBehavior : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Reset the platform to its default position.
+    /// </summary>
     private void ResetPosition()
     {
         var actualSpeed = speed * Time.deltaTime;
@@ -105,9 +113,11 @@ public class MovingBehavior : MonoBehaviour
         shouldMove = start;
     }
 
+    /// <summary>
+    /// Draw a yellow sphere at the transform's position
+    /// </summary>
     void OnDrawGizmos()
     {
-        // Draw a yellow sphere at the transform's position
         Gizmos.color = Color.red;
         Gizmos.DrawLine(startingLocation.position, destinationLocation.position);
     }
