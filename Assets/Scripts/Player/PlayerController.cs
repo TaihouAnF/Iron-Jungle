@@ -5,6 +5,10 @@ using UnityEngine;
 using MyBox;
 using Unity.VisualScripting;
 
+/// <summary>
+/// This class controls the player's basic movement and the grapple. 
+/// It also serves as subject for observer to listen.
+/// </summary>
 public class PlayerController : MonoBehaviour
 {
     [Header("Player Attributes")]
@@ -64,7 +68,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] GameState gameState;
     [SerializeField] DebugSettings debugSettings;
 
-    //Events
+    // Events
     public Action OnGrappleShoot;
     public Action OnGrappleLatch;
     public Action<float> WhileSwinging;
@@ -85,6 +89,9 @@ public class PlayerController : MonoBehaviour
     float horizontalInput;
     SpringJoint joint;
 
+    /// <summary>
+    /// Reset the player's current movement
+    /// </summary>
     public void Reset()
     {
         StunnedOff();
@@ -95,16 +102,22 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Method <c>Awake</c> is called when the object is initialized.
+    /// </summary>
     void Awake()
     {
         playerRb = GetComponent<Rigidbody>();
     }
 
+    /// <summary>
+    /// Method <c>Start</c> is called when the object's script is enabled, before any calls of <c>Update</c>.
+    /// </summary>
     void Start()
     {
         Physics.gravity = new(Physics.gravity.x, gravity, Physics.gravity.z);
 
-        //Tests. Make sure we have the correct hierarchy.
+        // Tests. Make sure we have the correct hierarchy.
         Debug.Assert(transform.GetChildsWhere((childT) => (childT == grappleStartPoint)).Count == 1,
         "grappleStartPoint must be a transfom child of this object");
 
@@ -117,8 +130,8 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
 
-        //It is assumed grappleEndPoint is not a transfrom child of this object.
-        //We need to keep it synced when its not in use
+        // It is assumed grappleEndPoint is not a transfrom child of this object.
+        // We need to keep it synced when its not in use
         if (!isSwinging && !isGrappling && !isRetracting)
         {
             SetGrapplePosition(grappleStartPoint.position);
@@ -126,15 +139,18 @@ public class PlayerController : MonoBehaviour
 
         #region Input
 
-        //Only allow input if we are playing and not in debug
+        // Only allow input if we are playing and not in debug
         if (gameState.state != States.Playing || debugSettings.godMode)
         {
             horizontalInput = 0;
             return;
         }
 
-
         horizontalInput = Input.GetAxis("Horizontal");
+
+        #endregion
+
+        #region Grapple Input
 
         if (Input.GetKeyDown(KeyCode.Mouse0) && !isGrappling && !isSwinging && !isRetracting && !isStunned)
         {
@@ -154,6 +170,7 @@ public class PlayerController : MonoBehaviour
         #endregion
     }
 
+    // FixedUpdate is called every fixed machine time, it won't be affected by machine performance
     void FixedUpdate()
     {
         lastVelocity = playerRb.velocity;
@@ -202,6 +219,11 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// This method handles collision between the player and other object,
+    /// In this case, the player would collide with walls and platforms, and get stunned
+    /// </summary>
+    /// <param name="collision"><c>collision</c> describes a collision. It contains information the collision</param>
     void OnCollisionEnter(Collision collision)
     {
         if (!isLanded)
@@ -212,6 +234,10 @@ public class PlayerController : MonoBehaviour
 
     #region Move Methods
 
+    /// <summary>
+    /// This method checks whether the player object is on the ground
+    /// </summary>
+    /// <returns>True if on the ground, Otherwise False.</returns>
     private bool GroundCheck()
     {
         Vector3 squareExtents = new(GetComponent<BoxCollider>().bounds.extents.x -0.1f, 0, GetComponent<BoxCollider>().bounds.extents.z);
@@ -219,6 +245,10 @@ public class PlayerController : MonoBehaviour
                                 Vector3.down, out _, Quaternion.identity, GetComponent<BoxCollider>().bounds.extents.y + 0.1f);
     }
 
+    /// <summary>
+    /// This method controls the player's fundamental horizontal movement.
+    /// </summary>
+    /// <param name="horizontalInput"><c>horizontalInput</c> is the player input (for example. A/D)</param>
     private void SidewayMoving(float horizontalInput)
     {
         playerRb.velocity = new Vector3(horizontalInput * sidewayMoveSpeed, playerRb.velocity.y, 0);
@@ -229,17 +259,22 @@ public class PlayerController : MonoBehaviour
 
     #region Stun Method
 
+    /// <summary>
+    /// Method <c>Stun</c> performs stunning effect when the player 
+    /// collides with walls or platforms with certain speed.
+    /// </summary>
+    /// <param name="collision"><c>collision</c> describes a collision. It contains information the collision</param>
     void Stun(Collision collision)
     {
 
-        //We only apply a stun if the player is moving a significant ammount
+        // We only apply a stun if the player is moving a significant ammount
         if (lastVelocity.magnitude < minVelocityStunThreshold)
         {
             return;
         }
 
-        //Check angle, we only want to stun when it makes contact on its sides.
-        //Note: sides are in world space
+        // Check angle, we only want to stun when it makes contact on its sides.
+        // Note: sides are in world space
         float desiredSideDotProduct = Mathf.Cos(maxStunAngle * Mathf.Deg2Rad);
         int index = collision.contacts.FirstIndex((point) =>
             (Vector3.Dot(Vector3.right, point.normal) <= desiredSideDotProduct ||
@@ -250,7 +285,7 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        //Make the player bounce off on what they made contact with
+        // Make the player bounce off on what they made contact with
         playerRb.velocity = lastVelocity.magnitude * stunBounceMultiplier * collision.GetContact(index).normal;
         if (isSwinging || isGrappling)
         {
@@ -261,6 +296,10 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// This method controls stunning event, broadcasting the event to all its listener
+    /// (for e.g. Animation Controller and Sound Effect Controller)
+    /// </summary>
     void StunnedOff()
     {
         if (isStunned)
@@ -274,6 +313,12 @@ public class PlayerController : MonoBehaviour
 
     #region Grapple Methods
 
+    /// <summary>
+    /// This method perfroms Grapple shooting process, 
+    /// and it will pause on frame ends and continue on the next frame
+    /// until the process is done. 
+    /// </summary>
+    /// <returns>null, it is used for fetch the current status and continue on the next call</returns>
     private IEnumerator ShootGrapple()
     {
 
@@ -287,11 +332,11 @@ public class PlayerController : MonoBehaviour
             // Edge case, stop shooting the grapple if we got stunned
             if (isStunned)
             {
-                //We wont detach here. we let the stun method handle it
+                // We wont detach here. we let the stun method handle it
                 yield break;
             }
 
-            //Move Grapple
+            // Move Grapple
             SetGrapplePosition(Vector3.Lerp(grappleStartPoint.position, target, grappleTravelMotion.Evaluate(normTime)));
             Vector3 shootingDir = (grappleEndPoint.position - grappleStartPoint.position).normalized;
 
@@ -327,6 +372,10 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// This method performs grapple latching, i.e. the springjoint setup for grapple feature
+    /// </summary>
+    /// <param name="hit"><c>hit</c> contain the information the ray hit starting from the player</param>
     private void LatchGrapple(RaycastHit hit)
     {
         isSwinging = true;
@@ -364,6 +413,9 @@ public class PlayerController : MonoBehaviour
         OnGrappleLatch?.Invoke();
     }
 
+    /// <summary>
+    /// This method detaches the grapple, undo the previous method: <see cref="LatchGrapple(RaycastHit)"/>.
+    /// </summary>
     private void DetachGrapple()
     {
         isSwinging = false;
@@ -385,6 +437,10 @@ public class PlayerController : MonoBehaviour
         StartCoroutine(RetractGrapple());
     }
 
+    /// <summary>
+    /// This method performs retracting the grapple, similar to <see cref="ShootGrapple"/>
+    /// </summary>
+    /// <returns>null, it is used for fetch the current status and continue on the next call</returns>
     private IEnumerator RetractGrapple()
     {
         isRetracting = true;
@@ -408,6 +464,10 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// This method performs swinging on the player by adding force to it
+    /// </summary>
+    /// <param name="horizontalInput"><c>horizontalInput</c> is the player input (for example. A/D)</param>
     private void Swing(float horizontalInput)
     {
         playerRb.AddForce(horizontalInput * horizontalForce * Vector3.right, ForceMode.Force);
@@ -418,11 +478,20 @@ public class PlayerController : MonoBehaviour
 
     #region Utils
 
+    /// <summary>
+    /// This method gets the current distance of the grapple
+    /// </summary>
+    /// <returns>a floating point number representing the distance in world space</returns>
     private float GetGrappleDistance()
     {
         return Vector3.Distance(grappleStartPoint.position, grappleEndPoint.position);
     }
 
+    /// <summary>
+    /// This method set the current grapple endpoint of the player, 
+    /// which will be used when latching: <see cref="LatchGrapple(RaycastHit)"/>.
+    /// </summary>
+    /// <param name="pos"><c>pos</c> is world space vector storing the position of endpoint.</param>
     private void SetGrapplePosition(Vector3 pos)
     {
         grappleEndPoint.position = pos;
