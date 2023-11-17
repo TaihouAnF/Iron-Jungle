@@ -23,6 +23,7 @@ public class BreakingBehavior : MonoBehaviour
     public AnimationCurve frequencyScale;
 
     [Header("Fade Attributes")]
+
     public bool doFades;
     public float fadeOutTime;
     public float fadeInTime;
@@ -31,17 +32,22 @@ public class BreakingBehavior : MonoBehaviour
 
 
     [Header("Reference")]
+
     [Tooltip("Object reference that we are going to break")]
     [SerializeField] GameObject _breakingObject;
     [SerializeField] GameObject _mesh;
 
     Material _material;
 
+    /// <summary>
+    /// Method <c>Awake</c> is called when the object is initialized.
+    /// </summary>
     void Awake()
     {
         _material = _mesh.GetComponent<MeshRenderer>().material;
     }
 
+    // Start is called before the first frame update
     void Start()
     {
         //Tests. Make sure we have the correct hierarchy.
@@ -51,6 +57,8 @@ public class BreakingBehavior : MonoBehaviour
         Debug.Assert(_breakingObject.transform.GetChildsWhere((childT) => (childT == _mesh.transform)).Count == 1,
         $"{_mesh.name} must be a transfom child of {_breakingObject.name}");
     }
+
+    #region Breaking Methods
 
     public void SetBreakingStart(bool start)
     {
@@ -62,12 +70,19 @@ public class BreakingBehavior : MonoBehaviour
 
     }
 
+    /// <summary>
+    /// This method enables the performing of breaking behavior.
+    /// </summary>
     public void StartBreaking()
     {
         startBreaking = true;
         StartCoroutine(Breaking());
     }
 
+    /// <summary>
+    /// This method performs breaking behavior.
+    /// </summary>
+    /// <returns>null, it is used for fetch the current status and continue on the next call</returns>
     private IEnumerator Breaking()
     {
         breaking = true;
@@ -135,8 +150,10 @@ public class BreakingBehavior : MonoBehaviour
         startBreaking = false;
     }
 
-
-
+    /// <summary>
+    /// This method set the transparency of the mesh
+    /// </summary>
+    /// <param name="alpha"><c>alpha</c> is a float representing the current alpha value of the mesh.</param>
     public void SetTransparency(float alpha)
     {
         if (_material.color != null)
@@ -146,4 +163,6 @@ public class BreakingBehavior : MonoBehaviour
             _material.color = newColor;
         }
     }
+
+    #endregion
 }

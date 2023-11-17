@@ -24,6 +24,7 @@ public class RotatingBehavior : MonoBehaviour
     [SerializeField] Quaternion startingAngle;
     Rigidbody rotatingRb;
 
+    // Start is called before the first frame update
     void Start()
     {
         timeWaitCoolDown = timeToWait;
@@ -69,6 +70,11 @@ public class RotatingBehavior : MonoBehaviour
         }
     }
 
+    #region Rotating Methods
+
+    /// <summary>
+    /// This method rotates the platform.
+    /// </summary>
     private void Rotate()
     {
         if (timeWaitCoolDown != timeToWait) timeWaitCoolDown = timeToWait;
@@ -88,14 +94,23 @@ public class RotatingBehavior : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Reset the platform to its default orientation
+    /// </summary>
     private void ResetRotation()
     {
         var actualSpeed = angleSpeed * Time.deltaTime;
         rotatingRb.MoveRotation(Quaternion.RotateTowards(rotatingObject.transform.rotation, startingAngle, actualSpeed));
     }
 
+    #endregion
+
+    #region Utils
+
     public void SetRotatingStart(bool start)
     {
         shouldRotate = start;
     }
+
+    #endregion
 }
